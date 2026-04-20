@@ -15,4 +15,3 @@
 - Does the component still behave correctly with keyboard navigation?
 - Are class names following the local style helpers?
 - Is the new UI aligned with the app's current shadcn patterns?
-

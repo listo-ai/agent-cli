@@ -15,4 +15,3 @@
 - Are errors contextual and actionable?
 - Are new types serializable only where needed?
 - Is the concurrency model obvious from the function boundaries?
-

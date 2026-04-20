@@ -29,3 +29,4 @@ By default the CLI reads the remote registry from:
 
 Override it with `--registry-url` or `AGENT_CLI_REGISTRY`.
 
+Source skills are organized as `skills/<name>/README.md` so each skill can grow into its own folder when it needs extra notes, references, or assets.

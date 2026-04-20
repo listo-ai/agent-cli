@@ -15,4 +15,3 @@
 - Is the component easy to scan top-to-bottom?
 - Can the behavior be tested without rendering the whole page?
 - Does the state model avoid stale props or race-prone effects?
-
