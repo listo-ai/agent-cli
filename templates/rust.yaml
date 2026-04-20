@@ -1,0 +1,31 @@
+# agent-cli stack: rust
+# Skills registry: https://raw.githubusercontent.com/NubeDev/agent-cli/master/skills-registry.yaml
+agents:
+  - name: gemini
+    path: ".mcp.json"
+    format: "standard"
+  - name: vscode
+    path: ".vscode/settings.json"
+    format: "vscode"
+  - name: claude
+    path: "~/.config/Claude/claude_desktop_config.json"
+    format: "standard"
+  - name: cursor
+    path: ".cursor/mcp.json"
+    format: "standard"
+
+servers:
+  context7:
+    command: "npx"
+    args: ["-y", "@upstash/context7-mcp"]
+  github:
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "set-me"
+
+# Optional servers:
+#   filesystem:
+#     command: "npx"
+#     args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+
