@@ -89,13 +89,18 @@ pub async fn update(name: Option<&str>, registry_url: &str) -> Result<()> {
 }
 
 pub fn remove(name: &str) -> Result<()> {
-    let file_path = install_path(name);
     let mut lock = load_lock()?;
+    let file_path = lock
+        .skills
+        .get(name)
+        .map(|entry| PathBuf::from(&entry.path))
+        .unwrap_or_else(|| install_path(name, None));
 
     if file_path.exists() {
         fs::remove_file(&file_path)
             .with_context(|| format!("Failed to remove {}", file_path.display()))?;
         println!("removed {}", file_path.display());
+        remove_empty_skill_dirs(file_path.parent())?;
     } else if !lock.skills.contains_key(name) {
         bail!("Skill `{name}` is not installed.");
     }
@@ -111,20 +116,7 @@ pub fn list_installed() -> Result<()> {
     let mut installed_files = BTreeSet::new();
 
     if install_dir.exists() {
-        for entry in fs::read_dir(&install_dir)
-            .with_context(|| format!("Failed to read {}", install_dir.display()))?
-        {
-            let entry = entry?;
-            let path = entry.path();
-            if path.file_name().and_then(|name| name.to_str()) == Some(".skills.lock") {
-                continue;
-            }
-            if path.extension().and_then(|ext| ext.to_str()) == Some("md") {
-                if let Some(stem) = path.file_stem().and_then(|stem| stem.to_str()) {
-                    installed_files.insert(stem.to_string());
-                }
-            }
-        }
+        collect_installed_skill_names(&install_dir, &mut installed_files)?;
     }
 
     let names: BTreeSet<String> = installed_files
@@ -156,7 +148,18 @@ async fn install_entry(
     let markdown = fetch_skill_markdown(client, registry_url, entry).await?;
     ensure_install_dir()?;
 
-    let target = install_path(&entry.name);
+    let target = install_path(&entry.name, Some(&entry.path));
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("Failed to create {}", parent.display()))?;
+    }
+
+    let legacy_target = install_path(&entry.name, None);
+    if legacy_target != target && legacy_target.exists() {
+        fs::remove_file(&legacy_target)
+            .with_context(|| format!("Failed to remove legacy {}", legacy_target.display()))?;
+    }
+
     let status = match fs::read_to_string(&target) {
         Ok(existing) if existing == markdown => "unchanged",
         Ok(_) => "updated",
@@ -183,7 +186,13 @@ fn ensure_install_dir() -> Result<()> {
     fs::create_dir_all(INSTALL_DIR).with_context(|| format!("Failed to create {INSTALL_DIR}"))
 }
 
-fn install_path(name: &str) -> PathBuf {
+fn install_path(name: &str, source_path: Option<&str>) -> PathBuf {
+    if let Some(source_path) = source_path {
+        if let Some(relative_path) = source_path.strip_prefix("skills/") {
+            return Path::new(INSTALL_DIR).join(relative_path);
+        }
+    }
+
     Path::new(INSTALL_DIR).join(format!("{name}.md"))
 }
 
@@ -212,4 +221,51 @@ fn write_lock(lock: &SkillsLock) -> Result<()> {
 
     let body = serde_yml::to_string(lock).context("Failed to serialize .skills.lock")?;
     fs::write(&lock_path, body).with_context(|| format!("Failed to write {}", lock_path.display()))
+}
+
+fn collect_installed_skill_names(dir: &Path, names: &mut BTreeSet<String>) -> Result<()> {
+    for entry in fs::read_dir(dir).with_context(|| format!("Failed to read {}", dir.display()))? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.file_name().and_then(|name| name.to_str()) == Some(".skills.lock") {
+            continue;
+        }
+
+        if path.is_dir() {
+            if let Some(name) = path.file_name().and_then(|name| name.to_str()) {
+                names.insert(name.to_string());
+            }
+            continue;
+        }
+
+        if path.extension().and_then(|ext| ext.to_str()) == Some("md") {
+            if let Some(stem) = path.file_stem().and_then(|stem| stem.to_str()) {
+                names.insert(stem.to_string());
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn remove_empty_skill_dirs(mut dir: Option<&Path>) -> Result<()> {
+    while let Some(path) = dir {
+        if path == Path::new(INSTALL_DIR) {
+            break;
+        }
+
+        match fs::remove_dir(path) {
+            Ok(()) => dir = path.parent(),
+            Err(err) if err.kind() == std::io::ErrorKind::DirectoryNotEmpty => break,
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+                dir = path.parent();
+            }
+            Err(err) => {
+                return Err(err).with_context(|| format!("Failed to remove {}", path.display()));
+            }
+        }
+    }
+
+    Ok(())
 }
