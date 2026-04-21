@@ -1,5 +1,4 @@
 # agent-cli stack: frontend (typescript/react)
-# Skills registry: https://raw.githubusercontent.com/NubeDev/agent-cli/master/skills-registry.yaml
 agents:
   - name: gemini
     path: ".mcp.json"

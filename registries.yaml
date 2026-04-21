@@ -1,0 +1,22 @@
+# Known skill registries.
+# Each entry is a git repo that contains agent skill files.
+# The skill_file is the path within the repo to load as the skill.
+#
+# Add your own:
+#   agent-cli registry add myskill https://github.com/me/my-skills
+
+registries:
+  - name: rust
+    url: https://github.com/leonardomso/rust-skills
+    skill_file: SKILL.md
+    description: 179 Rust rules for AI agents (ownership, async, error handling, perf)
+
+  - name: frontend
+    url: https://github.com/addyosmani/agent-skills
+    skill_file: skills/frontend-ui-engineering/SKILL.md
+    description: Production-quality UI engineering — React components, state, accessibility, design systems
+
+  - name: flutter
+    url: https://github.com/mateusfccp/flutter-skills
+    skill_file: SKILL.md
+    description: Flutter skills for AI agents

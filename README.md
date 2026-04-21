@@ -1,32 +1,108 @@
 # agent-cli
 
-`agent-cli` bootstraps an AI coding setup on any developer machine.
+Agent-agnostic CLI for managing AI coding agent skills and MCP server config.
 
-It has two jobs:
+Two jobs:
+- **Skills** — clone community skill repos into `~/.agent-cli/skills/` so any agent can load them.
+- **MCP sync** — drop a `mcp-compose.yaml` template into a repo and sync it to every agent config file.
 
-- sync one `mcp-compose.yaml` into multiple agent configs
-- install stack-specific markdown skills into `./docs/agents/`
-
-## Commands
+## Install
 
 ```bash
-agent-cli init rust
-agent-cli init react
-agent-cli sync
-agent-cli test
-agent-cli skills list
-agent-cli skills add rust typescript react shadcn
-agent-cli skills installed
-agent-cli skills update
-agent-cli skills remove shadcn
+cargo install --path .
 ```
 
-## Registry
+---
 
-By default the CLI reads the remote registry from:
+## Skills
 
-`https://raw.githubusercontent.com/NubeDev/agent-cli/master/skills-registry.yaml`
+Skills are git repos containing a `SKILL.md` (and optionally individual rule files).
+The CLI clones them locally — agents load from the path printed by `agent-cli path <name>`.
 
-Override it with `--registry-url` or `AGENT_CLI_REGISTRY`.
+```bash
+# See what's available (built-in + any custom registries you've added)
+agent-cli ls-remote
 
-Source skills are organized as `skills/<name>/README.md` so each skill can grow into its own folder when it needs extra notes, references, or assets.
+# Install a skill
+agent-cli install rust
+agent-cli install flutter
+
+# List installed skills
+agent-cli ls
+
+# Update one skill
+agent-cli update rust
+
+# Update all installed skills
+agent-cli update
+
+# Print the skill file path (use this in agent config)
+agent-cli path rust
+
+# Print the skill content
+agent-cli show rust
+
+# Remove a skill
+agent-cli remove rust
+```
+
+### Custom registries
+
+Any git repo with a `SKILL.md` (or any markdown file) can be a skill source.
+
+```bash
+# Add a custom skill registry
+agent-cli registry add myskill https://github.com/me/my-skills
+
+# With a non-default skill file
+agent-cli registry add myskill https://github.com/me/my-skills --skill-file RULES.md
+
+# List all registries (built-in + custom)
+agent-cli registry list
+
+# Remove a custom registry (built-ins cannot be removed)
+agent-cli registry remove myskill
+```
+
+Custom registries are saved to `~/.agent-cli/config.yaml`.
+Built-in registries are defined in [`registries.yaml`](./registries.yaml) and shipped inside the binary.
+
+### Built-in registries
+
+See [`registries.yaml`](./registries.yaml) for the current list.
+
+---
+
+## MCP server sync
+
+Drop a template `mcp-compose.yaml` into a repo, edit it, then sync to all agents.
+
+```bash
+# Write a template for your stack
+agent-cli init rust
+agent-cli init frontend
+agent-cli init shadcn
+
+# Sync mcp-compose.yaml to all configured agents
+agent-cli sync
+
+# Test health of all servers in mcp-compose.yaml
+agent-cli health
+```
+
+Available templates: `rust`, `frontend` (alias: `typescript`, `react`), `shadcn` (alias: `shadcn-ui`).
+
+---
+
+## Skills directory
+
+```
+~/.agent-cli/
+  skills/
+    rust/          ← git clone of leonardomso/rust-skills
+      SKILL.md     ← the file your agent loads
+      rules/       ← individual rule files (for human browsing)
+    flutter/       ← git clone of flutter skills repo
+      SKILL.md
+  config.yaml      ← custom registries you've added
+```
