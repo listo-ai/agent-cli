@@ -67,6 +67,19 @@ agent-cli registry remove myskill
 Custom registries are saved to `~/.agent-cli/config.yaml`.
 Built-in registries are defined in [`registries.yaml`](./registries.yaml) and shipped inside the binary.
 
+### `install_cmd` and `update_cmd`
+
+By default, `agent-cli install` clones the registry URL with `git clone` and `agent-cli update` runs `git pull`. Some registries (like `flutter`) publish via a separate package manager tool. These set `install_cmd` and `update_cmd` in `registries.yaml`, which are run instead:
+
+```yaml
+- name: flutter
+  url: https://github.com/flutter/skills
+  install_cmd: "npx skills add flutter/skills"
+  update_cmd: "npx skills update flutter/skills"
+```
+
+Both commands run with the skills directory as the working directory.
+
 ### Built-in registries
 
 See [`registries.yaml`](./registries.yaml) for the current list.
@@ -82,6 +95,7 @@ Drop a template `mcp-compose.yaml` into a repo, edit it, then sync to all agents
 agent-cli init rust
 agent-cli init frontend
 agent-cli init shadcn
+agent-cli init dart
 
 # Sync mcp-compose.yaml to all configured agents
 agent-cli sync
@@ -90,7 +104,7 @@ agent-cli sync
 agent-cli health
 ```
 
-Available templates: `rust`, `frontend` (alias: `typescript`, `react`), `shadcn` (alias: `shadcn-ui`).
+Available templates: `rust`, `frontend` (alias: `typescript`, `react`), `shadcn` (alias: `shadcn-ui`), `dart`.
 
 ---
 

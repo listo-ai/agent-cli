@@ -10,13 +10,26 @@ registries:
     url: https://github.com/leonardomso/rust-skills
     skill_file: SKILL.md
     description: 179 Rust rules for AI agents (ownership, async, error handling, perf)
+    install_cmd: "pnpm dlx skills add leonardomso/rust-skills --yes --global"
+    update_cmd: "pnpm dlx skills update leonardomso/rust-skills --yes --global"
 
   - name: frontend
     url: https://github.com/addyosmani/agent-skills
     skill_file: skills/frontend-ui-engineering/SKILL.md
     description: Production-quality UI engineering — React components, state, accessibility, design systems
+    install_cmd: "pnpm dlx skills add addyosmani/agent-skills --yes --global"
+    update_cmd: "pnpm dlx skills update addyosmani/agent-skills --yes --global"
 
   - name: flutter
-    url: https://github.com/mateusfccp/flutter-skills
-    skill_file: SKILL.md
+    url: https://github.com/flutter/skills
+    skill_file: skills/flutter-architecting-apps/SKILL.md
     description: Flutter skills for AI agents
+    install_cmd: "pnpm dlx skills add flutter/skills --yes --global"
+    update_cmd: "pnpm dlx skills update flutter/skills --yes --global"
+
+  - name: golang
+    url: https://github.com/samber/cc-skills-golang
+    skill_file: skills/golang-code-style/SKILL.md
+    description: 35 Go skills for AI agents — code style, performance, concurrency, error handling, testing, security
+    install_cmd: "pnpm dlx skills add samber/cc-skills-golang --yes --global"
+    update_cmd: "pnpm dlx skills update samber/cc-skills-golang --yes --global"

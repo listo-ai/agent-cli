@@ -18,6 +18,16 @@ pub struct RegistryEntry {
     pub skill_file: String,
     #[serde(default)]
     pub description: String,
+    /// Optional install command to run instead of `git clone`.
+    /// Runs with the skills directory as cwd.
+    /// Example: "npx skills add flutter/skills"
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub install_cmd: Option<String>,
+    /// Optional update command to run instead of `git pull`.
+    /// Runs with the skills directory as cwd.
+    /// Example: "npx skills update flutter/skills"
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub update_cmd: Option<String>,
 }
 
 fn default_skill_file() -> String {
@@ -63,6 +73,9 @@ impl Store {
     }
 
     fn skills_dir(&self) -> PathBuf {
+        if let Ok(dir) = std::env::var("AGENT_CLI_SKILLS_DIR") {
+            return PathBuf::from(dir);
+        }
         self.root.join("skills")
     }
 
@@ -155,6 +168,28 @@ impl Store {
         }
 
         fs::create_dir_all(&self.skills_dir())?;
+
+        if let Some(cmd) = &reg.install_cmd {
+            println!("Running: {cmd}");
+            let mut parts = cmd.split_whitespace();
+            let prog = parts.next().unwrap();
+            let args: Vec<&str> = parts.collect();
+            let home = dirs::home_dir().context("Cannot determine home directory")?;
+            let status = Command::new(prog)
+                .args(&args)
+                .current_dir(&home)
+                .status()
+                .with_context(|| format!("Failed to run '{cmd}'\nMake sure Node.js / pnpm is installed."))?;
+            if !status.success() {
+                bail!("install_cmd failed for '{name}'");
+            }
+            // Write a marker so "already installed" check works on next run
+            fs::create_dir_all(&dest)?;
+            fs::write(dest.join(".skill-marker"), cmd)?;
+            println!("installed '{name}'");
+            return Ok(());
+        }
+
         println!("Cloning {} …", reg.url);
 
         let status = Command::new("git")
@@ -202,16 +237,36 @@ impl Store {
         for target in targets {
             let dir = self.skill_dir(&target);
             print!("updating '{target}' … ");
-            let status = Command::new("git")
-                .args(["pull", "--ff-only"])
-                .current_dir(&dir)
-                .status()
-                .context("git not found")?;
-            if status.success() {
-                let sha = git_current_sha(&dir).unwrap_or_else(|_| "unknown".into());
-                println!("@ {sha}");
+            // Use registry-specific update_cmd if available, otherwise git pull
+            let reg = self.find_registry(&target).ok();
+            let update_cmd = reg.as_ref().and_then(|r| r.update_cmd.as_deref());
+            if let Some(cmd) = update_cmd {
+                let mut parts = cmd.split_whitespace();
+                let prog = parts.next().unwrap();
+                let args: Vec<&str> = parts.collect();
+                let home = dirs::home_dir().unwrap_or_default();
+                let status = Command::new(prog)
+                    .args(&args)
+                    .current_dir(&home)
+                    .status()
+                    .with_context(|| format!("Failed to run '{cmd}'"))?;
+                if status.success() {
+                    println!("done");
+                } else {
+                    println!("FAILED");
+                }
             } else {
-                println!("FAILED");
+                let status = Command::new("git")
+                    .args(["pull", "--ff-only"])
+                    .current_dir(&dir)
+                    .status()
+                    .context("git not found")?;
+                if status.success() {
+                    let sha = git_current_sha(&dir).unwrap_or_else(|_| "unknown".into());
+                    println!("@ {sha}");
+                } else {
+                    println!("FAILED");
+                }
             }
         }
         Ok(())
@@ -277,6 +332,8 @@ impl Store {
             url: url.clone(),
             skill_file: skill_file.unwrap_or_else(default_skill_file),
             description: description.unwrap_or_default(),
+            install_cmd: None,
+            update_cmd: None,
         });
         self.save_config()?;
         println!("added '{name}' → {url}");
